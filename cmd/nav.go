@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"ross/fastfolder/render"
 	"strings"
+	"time"
 
 	"github.com/nsf/termbox-go"
 	"github.com/spf13/cobra"
@@ -27,6 +29,25 @@ func Nav(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Println("Error termbox init:", err)
 	}
+	fmt.Println("QUEE")
+	defer termbox.Close()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	dirs := getDirs(home)
+	list := render.NewList()
+	fmt.Println("VAMOS A RENDERIZAR")
+	for i := 0; i < len(dirs); i++ {
+		dir := dirs[i]
+		fmt.Println(dir.Name())
+		list.AddItem(&render.Item{
+			Text: dir.Name(),
+		})
+	}
+	// time.Sleep(300 * time.Millisecond)
+	list.Draw()
+	time.Sleep(3 * time.Second)
 }
 
 func getDirs(home string) []fs.DirEntry {
@@ -55,7 +76,6 @@ func selectFolders2Show(dirs *[]fs.DirEntry) []fs.DirEntry {
 		for i := 0; count < items && i < len(*dirs); i++ {
 			dir := (*dirs)[i]
 			if !strings.HasPrefix(dir.Name(), ".") {
-				fmt.Println(dir.Name())
 				count++
 				s = append(s, dir)
 			}
