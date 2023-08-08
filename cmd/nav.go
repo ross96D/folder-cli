@@ -29,7 +29,6 @@ func Nav(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Println("Error termbox init:", err)
 	}
-	fmt.Println("QUEE")
 	defer termbox.Close()
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -37,7 +36,6 @@ func Nav(cmd *cobra.Command, args []string) {
 	}
 	dirs := getDirs(home)
 	list := render.NewList()
-	fmt.Println("VAMOS A RENDERIZAR")
 	for i := 0; i < len(dirs); i++ {
 		dir := dirs[i]
 		fmt.Println(dir.Name())
