@@ -6,7 +6,6 @@ import (
 	"os"
 	"ross/fastfolder/render"
 	"strings"
-	"time"
 
 	"github.com/nsf/termbox-go"
 	"github.com/spf13/cobra"
@@ -24,6 +23,8 @@ var NavCmd = &cobra.Command{
 const items = 300
 const ShowInvisible = false
 
+var list render.ListItem
+
 func Nav(cmd *cobra.Command, args []string) {
 	err := termbox.Init()
 	if err != nil {
@@ -35,17 +36,36 @@ func Nav(cmd *cobra.Command, args []string) {
 		fmt.Println("Error:", err)
 	}
 	dirs := getDirs(home)
-	list := render.NewList()
+	list = render.NewList()
 	for i := 0; i < len(dirs); i++ {
 		dir := dirs[i]
-		fmt.Println(dir.Name())
 		list.AddItem(&render.Item{
 			Text: dir.Name(),
 		})
 	}
+	list.Items[0].Focus = true
 	// time.Sleep(300 * time.Millisecond)
 	list.Draw()
-	time.Sleep(3 * time.Second)
+
+	handleMain()
+}
+
+func handleMain() {
+	e := termbox.PollEvent()
+	if e.Type != termbox.EventKey {
+		handleMain()
+		return
+	}
+	if e.Ch == 'q' {
+		termbox.Close()
+		return
+	}
+	if e.Key == termbox.KeyArrowDown {
+		list.Focus(1)
+	} else if e.Key == termbox.KeyArrowUp {
+		list.Focus(-1)
+	}
+	handleMain()
 }
 
 func getDirs(home string) []fs.DirEntry {
