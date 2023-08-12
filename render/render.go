@@ -3,7 +3,6 @@ package render
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/nsf/termbox-go"
 )
@@ -49,6 +48,7 @@ func CleanScreen() {
 }
 
 func Debug(line int, a ...any) {
+	// return
 	w, _ := termbox.Size()
 	s := fmt.Sprint(a...)
 	length := len(s)
@@ -56,5 +56,5 @@ func Debug(line int, a ...any) {
 		termbox.SetChar(w-length+i, line, rune(s[i]))
 	}
 	termbox.Flush()
-	time.Sleep(1 * time.Millisecond)
+	// time.Sleep(1 * time.Millisecond)
 }

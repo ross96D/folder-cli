@@ -2,10 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"ross/fastfolder/render"
-	"strings"
+	"ross/fastfolder/utils"
 
 	"github.com/nsf/termbox-go"
 	"github.com/spf13/cobra"
@@ -20,13 +19,13 @@ var NavCmd = &cobra.Command{
 	},
 }
 
-const items = 300
-const ShowInvisible = false
-
 var list render.ListItem
+var nav utils.NavStack
+var isOpen bool
 
 func Nav(cmd *cobra.Command, args []string) {
 	err := termbox.Init()
+	isOpen = true
 	if err != nil {
 		fmt.Println("Error termbox init:", err)
 	}
@@ -35,69 +34,39 @@ func Nav(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
-	dirs := getDirs(home)
-	list = render.NewList()
-	for i := 0; i < len(dirs); i++ {
-		dir := dirs[i]
-		list.AddItem(&render.Item{
-			Text: dir.Name(),
-		})
-	}
-	list.Items[0].Focus = true
-	// time.Sleep(300 * time.Millisecond)
-	list.Draw()
+	nav = utils.NewNavStack()
+	nav.Push(home, 0)
 
-	handleMain()
+	list = render.NewList()
+	list.Repopulate(nav.Get(), false, 0)
+	// time.Sleep(300 * time.Millisecond)
+	for isOpen {
+		handleMain()
+	}
 }
 
 func handleMain() {
 	e := termbox.PollEvent()
 	if e.Type != termbox.EventKey {
-		handleMain()
 		return
 	}
-	if e.Ch == 'q' {
+	if e.Ch == 'q' || e.Key == termbox.KeyCtrlC {
 		termbox.Close()
+		isOpen = false
 		return
 	}
 	if e.Key == termbox.KeyArrowDown {
 		list.Focus(1)
 	} else if e.Key == termbox.KeyArrowUp {
 		list.Focus(-1)
-	}
-	handleMain()
-}
-
-func getDirs(home string) []fs.DirEntry {
-	dirs, err := os.ReadDir(home)
-	if err != nil {
-		fmt.Println("ReadDir:", err)
-	}
-	// cmd_ := exec.Command("gnome-terminal", "--", "bash", "-c", "cd "+home+" && exec $SHELL")
-	// err = cmd_.Run()
-
-	return selectFolders2Show(&dirs)
-
-}
-
-func selectFolders2Show(dirs *[]fs.DirEntry) []fs.DirEntry {
-	var s []fs.DirEntry
-	if ShowInvisible {
-		if len(*dirs) < items {
-			s = *dirs
-		} else {
-			s = (*dirs)[0:items]
+	} else if e.Key == termbox.KeyArrowRight {
+		if list.Items[list.IFocus].IsDir {
+			currpath := nav.Get() + "/" + list.Items[list.IFocus].Name
+			nav.Push(currpath, list.IFocus)
+			list.Repopulate(nav.Get(), true, 0)
 		}
-	} else {
-		s = make([]fs.DirEntry, 0, items)
-		count := 0
-		for i := 0; count < items && i < len(*dirs); i++ {
-			dir := (*dirs)[i]
-			if !strings.HasPrefix(dir.Name(), ".") {
-				count++
-				s = append(s, dir)
-			}
-		}
+	} else if e.Key == termbox.KeyArrowLeft {
+		nav.Pop()
+		list.Repopulate(nav.Get(), true, nav.GetFocus())
 	}
-	return s
 }
