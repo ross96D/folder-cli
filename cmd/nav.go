@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"ross/fastfolder/render"
-	"ross/fastfolder/utils"
 
 	"github.com/nsf/termbox-go"
 	"github.com/spf13/cobra"
@@ -20,7 +19,7 @@ var NavCmd = &cobra.Command{
 }
 
 var list render.ListItem
-var nav utils.NavStack
+var nav render.NavStack
 var isOpen bool
 
 func Nav(cmd *cobra.Command, args []string) {
@@ -34,7 +33,7 @@ func Nav(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
-	nav = utils.NewNavStack()
+	nav = render.NewNavStack()
 	nav.Push(home, 0)
 
 	list = render.NewList()

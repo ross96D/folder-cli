@@ -19,11 +19,40 @@ const (
 	noFullRender
 )
 
+type Position struct {
+	line    int
+	initial int
+	final   int
+	Focus   bool
+}
+
 type Item struct {
 	Name     string
-	Focus    bool
 	IsDir    bool
 	Callback func()
+	prev     Position
+	pos      Position
+}
+
+func (t *Item) Render() error {
+	if t.prev == t.pos {
+		return nil
+	} else {
+		t.prev = t.pos
+	}
+	t.derender()
+
+	var err error
+	if t.pos.Focus {
+		err = RString(t.Name, t.pos.line, t.pos.initial, termbox.ColorGreen)
+	} else {
+		err = RString(t.Name, t.pos.line, t.pos.initial, termbox.ColorDefault)
+	}
+	return err
+}
+
+func (t *Item) derender() {
+	CleanBlock(t.prev.line, t.prev.line, t.prev.initial, t.prev.final)
 }
 
 type ListItem struct {
@@ -52,21 +81,14 @@ func (l *ListItem) Draw() {
 		l.ritemStart = len(l.Items) - h
 	}
 	var err error
-	Debug(0, "start ", l.ritemStart, " ", len(l.Items), " ", l.ritemEnd)
 	for e := l.ritemStart; e < len(l.Items); e++ {
 		i := e - l.ritemStart
-		if l.Items[e].Focus {
-			Debug(1, "ifocus", l.IFocus)
-			Debug(4, l.Items[e].Name, " ", e)
-			err = RString(l.Items[e].Name, i, termbox.ColorGreen)
-		} else {
-			Debug(8, "ZZ ", e, " ", l.IFocus)
-			err = RString(l.Items[e].Name, i, termbox.ColorDefault)
-		}
+		l.Items[e].pos.line = i
+
+		err = l.Items[e].Render()
 
 		if err != nil {
 			if err.Error() == ErrorHeightOverflow {
-				Debug(5, "error", e)
 				l.ritemEnd = e
 			}
 			break
@@ -85,26 +107,24 @@ func (l *ListItem) AddItem(i *Item) {
 
 // dir 1 is down, -1 is up. The list start from the top to bottom
 func (l *ListItem) Focus(dir int) {
-	if l.IFocus == 0 && l.Items[0].Focus == false {
-		l.Items[0].Focus = true
+	if l.IFocus == 0 && l.Items[0].pos.Focus == false {
+		l.Items[0].pos.Focus = true
 	} else {
 		if dir == 1 {
 			if len(l.Items)-1 == l.IFocus {
 				return
 			}
-			l.Items[l.IFocus].Focus = false
-			Debug(6, l.IFocus)
+			l.Items[l.IFocus].pos.Focus = false
 			l.IFocus = l.IFocus + 1
-			l.Items[l.IFocus].Focus = true
-			Debug(7, l.IFocus)
+			l.Items[l.IFocus].pos.Focus = true
 
 		} else if dir == -1 {
 			if l.IFocus == 0 {
 				return
 			}
-			l.Items[l.IFocus].Focus = false
+			l.Items[l.IFocus].pos.Focus = false
 			l.IFocus = l.IFocus - 1
-			l.Items[l.IFocus].Focus = true
+			l.Items[l.IFocus].pos.Focus = true
 		}
 	}
 	if l.IFocus < l.ritemStart {
@@ -116,7 +136,6 @@ func (l *ListItem) Focus(dir int) {
 		l.ritemStart += 1
 		l.ritemEnd += 1
 	}
-	Clear()
 	l.Draw()
 }
 
@@ -135,16 +154,19 @@ func (l *ListItem) Repopulate(path string, deb bool, focus int) {
 		l.AddItem(&Item{
 			Name:  entry.Name(),
 			IsDir: entry.IsDir(),
+			pos: Position{
+				line:    -1,
+				initial: 0,
+				final:   len(entry.Name()),
+			},
+			prev: Position{},
 		})
 	}
 	if deb && focus == 0 {
-		l.Items[0].Focus = true
-		for i := 0; i < len(l.Items); i++ {
-			Debug(3, *l.Items[i])
-		}
+		l.Items[0].pos.Focus = true
 	}
 	l.IFocus = focus
-	l.Items[l.IFocus].Focus = true
+	l.Items[l.IFocus].pos.Focus = true
 	l.Draw()
 }
 
