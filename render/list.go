@@ -59,9 +59,10 @@ type ListItem struct {
 	Items         []*Item
 	ritemStart    int
 	ritemEnd      int
-	IFocus        int
+	iFocus        int
 	state         StateList
 	canFullRender bool
+	FolderName    string
 }
 
 func NewList() ListItem {
@@ -107,32 +108,32 @@ func (l *ListItem) AddItem(i *Item) {
 
 // dir 1 is down, -1 is up. The list start from the top to bottom
 func (l *ListItem) Focus(dir int) {
-	if l.IFocus == 0 && l.Items[0].pos.Focus == false {
+	if l.iFocus == 0 && l.Items[0].pos.Focus == false {
 		l.Items[0].pos.Focus = true
 	} else {
 		if dir == 1 {
-			if len(l.Items)-1 == l.IFocus {
+			if len(l.Items)-1 == l.iFocus {
 				return
 			}
-			l.Items[l.IFocus].pos.Focus = false
-			l.IFocus = l.IFocus + 1
-			l.Items[l.IFocus].pos.Focus = true
+			l.Items[l.iFocus].pos.Focus = false
+			l.iFocus = l.iFocus + 1
+			l.Items[l.iFocus].pos.Focus = true
 
 		} else if dir == -1 {
-			if l.IFocus == 0 {
+			if l.iFocus == 0 {
 				return
 			}
-			l.Items[l.IFocus].pos.Focus = false
-			l.IFocus = l.IFocus - 1
-			l.Items[l.IFocus].pos.Focus = true
+			l.Items[l.iFocus].pos.Focus = false
+			l.iFocus = l.iFocus - 1
+			l.Items[l.iFocus].pos.Focus = true
 		}
 	}
-	if l.IFocus < l.ritemStart {
+	if l.iFocus < l.ritemStart {
 		if l.ritemStart > 0 {
 			l.ritemStart -= 1
 			l.ritemEnd -= 1
 		}
-	} else if !l.canFullRender && l.IFocus+2 > l.ritemEnd {
+	} else if !l.canFullRender && l.iFocus+2 > l.ritemEnd {
 		l.ritemStart += 1
 		l.ritemEnd += 1
 	}
@@ -140,13 +141,19 @@ func (l *ListItem) Focus(dir int) {
 }
 
 func (l *ListItem) clear() {
+	for i := 0; i < len(l.Items); i++ {
+		l.Items[i].derender()
+	}
 	l.Items = l.Items[:0]
-	l.IFocus = 0
-	Clear()
+	l.iFocus = 0
 	l.ritemStart = 0
 }
 
-func (l *ListItem) Repopulate(path string, deb bool, focus int) {
+func (l *ListItem) FocusItem() *Item {
+	return l.Items[l.iFocus]
+}
+
+func (l *ListItem) Repopulate(path string, focus int) {
 	l.clear()
 	entrys := getDirEntry(path)
 	for i := 0; i < len(entrys); i++ {
@@ -155,18 +162,15 @@ func (l *ListItem) Repopulate(path string, deb bool, focus int) {
 			Name:  entry.Name(),
 			IsDir: entry.IsDir(),
 			pos: Position{
-				line:    -1,
+				line:    i,
 				initial: 0,
 				final:   len(entry.Name()),
 			},
 			prev: Position{},
 		})
 	}
-	if deb && focus == 0 {
-		l.Items[0].pos.Focus = true
-	}
-	l.IFocus = focus
-	l.Items[l.IFocus].pos.Focus = true
+	l.iFocus = focus
+	l.Items[l.iFocus].pos.Focus = true
 	l.Draw()
 }
 

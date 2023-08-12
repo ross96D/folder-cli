@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"ross/fastfolder/render"
 
 	"github.com/nsf/termbox-go"
@@ -18,7 +17,6 @@ var NavCmd = &cobra.Command{
 	},
 }
 
-var list render.ListItem
 var nav render.NavStack
 var isOpen bool
 
@@ -29,16 +27,8 @@ func Nav(cmd *cobra.Command, args []string) {
 		fmt.Println("Error termbox init:", err)
 	}
 	defer termbox.Close()
-	home, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Println("Error:", err)
-	}
-	nav = render.NewNavStack()
-	nav.Push(home, 0)
 
-	list = render.NewList()
-	list.Repopulate(nav.Get(), false, 0)
-	// time.Sleep(300 * time.Millisecond)
+	nav = render.NewNavStack()
 	for isOpen {
 		handleMain()
 	}
@@ -54,18 +44,8 @@ func handleMain() {
 		isOpen = false
 		return
 	}
-	if e.Key == termbox.KeyArrowDown {
-		list.Focus(1)
-	} else if e.Key == termbox.KeyArrowUp {
-		list.Focus(-1)
-	} else if e.Key == termbox.KeyArrowRight {
-		if list.Items[list.IFocus].IsDir {
-			currpath := nav.Get() + "/" + list.Items[list.IFocus].Name
-			nav.Push(currpath, list.IFocus)
-			list.Repopulate(nav.Get(), true, 0)
-		}
-	} else if e.Key == termbox.KeyArrowLeft {
-		nav.Pop()
-		list.Repopulate(nav.Get(), true, nav.GetFocus())
+	isHandle := nav.HandleEvent(e)
+	if !isHandle {
+
 	}
 }

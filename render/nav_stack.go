@@ -3,12 +3,14 @@ package render
 import (
 	"os"
 	"sync"
+
+	"github.com/nsf/termbox-go"
 )
 
 type NavStack struct {
-	pathList []ListItem
-	paths    []string
+	paths    []ListItem
 	index    int
+	currpath string
 }
 
 func NewNavStack() NavStack {
@@ -18,42 +20,67 @@ func NewNavStack() NavStack {
 	}
 
 	nav := NavStack{
-		pathList: make([]ListItem, 50, 50),
-		paths:    make([]string, 50, 50),
-		index:    -1,
+		paths:    make([]ListItem, 50, 50),
+		index:    0,
+		currpath: home,
 	}
 	lis := NewList()
-	lis.Repopulate(home, false, 0)
-	nav.pathList[0] = lis
+	lis.Repopulate(home, 0)
+	nav.paths[0] = lis
 	return nav
 }
 
-func (n *NavStack) Push(s string, focus int) {
+func (n *NavStack) Push(s string) {
 	m := sync.Mutex{}
 	m.Lock()
 	defer m.Unlock()
 
+	n.currpath += "/" + s
 	n.index++
-	n.paths.paths[n.index] = s
+	if n.paths[n.index].FolderName != s {
+		n.paths[n.index] = NewList()
+		n.paths[n.index].Repopulate(n.currpath, 0)
+	}
 }
 
 // this function panics when stack is empty
-func (n *NavStack) Pop() string {
+func (n *NavStack) Pop() *ListItem {
 	m := sync.Mutex{}
 	m.Lock()
 
 	if n.index == 0 {
-		return n.paths.paths[n.index]
+		return &n.paths[n.index]
 	}
-	result := n.paths.paths[n.index]
+	n.paths[n.index].clear()
 	n.index -= 1
-	return result
+	result := n.paths[n.index]
+	result.Draw()
+	return &result
 }
 
-func (n *NavStack) Get() string {
-	return n.paths.paths[n.index]
+func (n *NavStack) Get() *ListItem {
+	return &n.paths[n.index]
 }
 
 func (n *NavStack) GetFocus() int {
-	return n.paths.focus
+	return n.paths[n.index].iFocus
+}
+
+func (n *NavStack) HandleEvent(e termbox.Event) bool {
+	handled := true
+	if e.Key == termbox.KeyArrowUp {
+		n.Get().Focus(-1)
+	} else if e.Key == termbox.KeyArrowDown {
+		n.Get().Focus(1)
+	} else if e.Key == termbox.KeyArrowRight {
+		if n.Get().FocusItem().IsDir {
+			newpath := n.Get().FolderName + "/" + n.Get().FocusItem().Name
+			n.Push(newpath)
+		}
+	} else if e.Key == termbox.KeyArrowLeft {
+		n.Pop()
+	} else {
+		handled = false
+	}
+	return handled
 }
