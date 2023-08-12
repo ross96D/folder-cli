@@ -38,6 +38,7 @@ func (n *NavStack) Push(s string) {
 	n.currpath += "/" + s
 	n.index++
 	if n.paths[n.index].FolderName != s {
+		n.paths[n.index-1].Derender()
 		n.paths[n.index] = NewList()
 		n.paths[n.index].Repopulate(n.currpath, 0)
 	}
@@ -51,7 +52,7 @@ func (n *NavStack) Pop() *ListItem {
 	if n.index == 0 {
 		return &n.paths[n.index]
 	}
-	n.paths[n.index].clear()
+	n.paths[n.index].Derender()
 	n.index -= 1
 	result := n.paths[n.index]
 	result.Draw()

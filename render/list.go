@@ -140,10 +140,14 @@ func (l *ListItem) Focus(dir int) {
 	l.Draw()
 }
 
-func (l *ListItem) clear() {
+func (l *ListItem) Derender() {
 	for i := 0; i < len(l.Items); i++ {
 		l.Items[i].derender()
+		l.Items[i].prev = Position{}
 	}
+}
+
+func (l *ListItem) clear() {
 	l.Items = l.Items[:0]
 	l.iFocus = 0
 	l.ritemStart = 0
