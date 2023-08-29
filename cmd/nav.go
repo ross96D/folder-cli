@@ -17,7 +17,7 @@ var NavCmd = &cobra.Command{
 	},
 }
 
-var nav render.NavStack
+var nav render.NavTree
 var isOpen bool
 
 func Nav(cmd *cobra.Command, args []string) {
@@ -28,7 +28,7 @@ func Nav(cmd *cobra.Command, args []string) {
 	}
 	defer termbox.Close()
 
-	nav = render.NewNavStack()
+	nav = render.NewNavTree()
 	for isOpen {
 		handleMain()
 	}

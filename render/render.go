@@ -2,14 +2,32 @@ package render
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/nsf/termbox-go"
 )
 
-const ErrorHeightOverflow = "Height Overflow"
-const ErrorWidthOverflow = "Width Overflow"
+// ! Considerar otra capa de abstraccion.
+//
+// ! La idea seria algo entre el render y el Node que se encarge de la cache,
+// ! de donde a donde renderizar y de saber si cambio la referencia
+//
+// ! Solo existiria (por ahora) una sola instancia q se alimenta del nodo actual del NavTree
+// ! Con esto ademas podemos implementar el recibo de eventos de termobox de forma asyncrona
+// ! Pero hay q verificar los problemas de concurrencia q esto podria tener
+//
+// ! Performance: Hacer el flush en una goroutine.. tal vez esto no cause problemas de concurrencia, aunque seria raro...
+func RenderNode(n *Node) {
+	for i := 0; i < len(*n.entries); i++ {
+		WriteString((*n.entries)[i].Name(), i, 0, termbox.ColorDefault, nil)
+	}
+}
 
-func RString(s string, line int, start int, bg termbox.Attribute) error {
+const ErrorHeightOverflow = "height Overflow"
+const ErrorWidthOverflow = "width Overflow"
+
+func WriteString(s string, line int, start int, bg termbox.Attribute, wg *sync.WaitGroup) error {
+	defer wg.Done()
 	w, h := termbox.Size()
 	if h <= line {
 		return errors.New(ErrorHeightOverflow)
@@ -55,6 +73,7 @@ func CleanBlock(lineStart int, lineEnd int, charStart int, charEnd int) error {
 			CleanCell(x, y)
 		}
 	}
+	termbox.Flush()
 	return nil
 }
 
@@ -64,7 +83,8 @@ func CleanCell(x, y int) {
 	termbox.SetFg(x, y, termbox.ColorDefault)
 }
 
-func UpdateScreen() {
+func UpdateScreen(wg *sync.WaitGroup) {
+	defer wg.Done()
 	termbox.Flush()
 }
 

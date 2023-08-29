@@ -2,84 +2,67 @@ package render
 
 import (
 	"os"
-	"sync"
 
 	"github.com/nsf/termbox-go"
 )
 
-type NavStack struct {
-	paths    []ListItem
-	index    int
-	currpath string
+type NavTree struct {
+	tree  *Tree
+	node  *Node
+	index int
+	// currpath string
 }
 
-func NewNavStack() NavStack {
-	home, err := os.UserHomeDir()
+func NewNavTree() NavTree {
+	_, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}
+	tree, index := NewTree()
+	node := tree.GetNode(index)
 
-	nav := NavStack{
-		paths:    make([]ListItem, 50, 50),
-		index:    0,
-		currpath: home,
+	nav := NavTree{
+		tree:  tree,
+		index: index,
+		node:  node,
 	}
-	lis := NewList()
-	lis.Repopulate(home, 0)
-	nav.paths[0] = lis
+	// lis := NewList()
+	// lis.Repopulate(home, 0)
+	// nav.paths[0] = lis
 	return nav
 }
 
-func (n *NavStack) Push(s string) {
-	m := sync.Mutex{}
-	m.Lock()
-	defer m.Unlock()
-
-	n.currpath += "/" + s
-	n.index++
-	if n.paths[n.index].FolderName != s {
-		n.paths[n.index-1].Derender()
-		n.paths[n.index] = NewList()
-		n.paths[n.index].Repopulate(n.currpath, 0)
+// If dir is positive will change to the rigth.
+// If dir is negative will change to the left.
+//
+// If dir is 0 will panic
+func (n *NavTree) ChangeIndex(dir int) {
+	if dir == 0 {
+		panic("Dir cannot be 0")
+	}
+	if dir > 0 {
+		newNode := n.node.FousedNode()
+		if newNode != nil {
+			n.node = newNode
+		}
+	} else {
+		newNode := n.node.parent
+		if newNode != nil {
+			n.node = newNode
+		}
 	}
 }
 
-// this function panics when stack is empty
-func (n *NavStack) Pop() *ListItem {
-	m := sync.Mutex{}
-	m.Lock()
-
-	if n.index == 0 {
-		return &n.paths[n.index]
-	}
-	n.paths[n.index].Derender()
-	n.index -= 1
-	result := n.paths[n.index]
-	result.Draw()
-	return &result
-}
-
-func (n *NavStack) Get() *ListItem {
-	return &n.paths[n.index]
-}
-
-func (n *NavStack) GetFocus() int {
-	return n.paths[n.index].iFocus
-}
-
-func (n *NavStack) HandleEvent(e termbox.Event) bool {
+func (n *NavTree) HandleEvent(e termbox.Event) bool {
 	handled := true
 	if e.Key == termbox.KeyArrowUp {
-		n.Get().Focus(-1)
+		n.node.Focus -= 1
 	} else if e.Key == termbox.KeyArrowDown {
-		n.Get().Focus(1)
+		n.node.Focus += 1
 	} else if e.Key == termbox.KeyArrowRight {
-		if n.Get().FocusItem().IsDir {
-			newpath := n.Get().FolderName + "/" + n.Get().FocusItem().Name
-			n.Push(newpath)
-		}
+		n.ChangeIndex(1)
 	} else if e.Key == termbox.KeyArrowLeft {
-		n.Pop()
+		n.ChangeIndex(-1)
 	} else {
 		handled = false
 	}
